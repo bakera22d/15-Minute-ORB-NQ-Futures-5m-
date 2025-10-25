@@ -62,12 +62,24 @@ if st.button("Run Backtest"):
                     stop_loss=stop_loss_pct / 100,
                     take_profit=take_profit_pct / 100
                 )
-            col1, col2, col3 = st.columns(3)
-            col1.metric("Total Trades", f"{len(results)}")
-            col2.metric("Sharpe Ratio", f"{sharpe:.2f}" if sharpe is not None else "N/A")
-            col3.metric("Max Drawdown", f"{max_dd:.2%}" if max_dd is not None else "N/A")
-            fig = plot_equity_curve(results)
-            st.plotly_chart(fig, use_container_width=True)
+          # --- Calculate extra metrics ---
+total_return = results["Cumulative"].iloc[-1] - 1 if not results.empty else 0
+win_rate = (results["Return"] > 0).mean() if not results.empty else 0
+avg_trade = results["Return"].mean() if not results.empty else 0
+
+# --- Show KPIs ---
+col1, col2, col3, col4, col5, col6 = st.columns(6)
+col1.metric("Total Trades", f"{len(results)}")
+col2.metric("Total Return", f"{total_return:.2%}")
+col3.metric("Win Rate", f"{win_rate:.2%}")
+col4.metric("Avg Trade Return", f"{avg_trade:.2%}")
+col5.metric("Sharpe Ratio", f"{sharpe:.2f}" if sharpe is not None else "N/A")
+col6.metric("Max Drawdown", f"{max_dd:.2%}" if max_dd is not None else "N/A")
+
+# --- Plot chart ---
+st.subheader("ORB Strategy Cumulative Performance")
+fig = plot_equity_curve(results)
+st.plotly_chart(fig, use_container_width=True)
             with st.expander("Show trade returns"):
                 st.dataframe(results)
             with st.expander("Show signals"):

@@ -3,9 +3,8 @@ import numpy as np
 
 def backtest_orb(data: pd.DataFrame, signals: pd.DataFrame, stop_loss: float = 0.003, take_profit: float = 0.006):
     """
-    Backtest the ORB strategy with breakeven trailing stop and target adjustment:
-    - When profit reaches 80% of the take-profit distance, stop moves to breakeven,
-      and take-profit is raised to +20% overall gain.
+    Backtest the ORB strategy with a breakeven trailing stop once
+    profit exceeds 60% of the take-profit target.
 
     Parameters
     ----------
@@ -25,6 +24,7 @@ def backtest_orb(data: pd.DataFrame, signals: pd.DataFrame, stop_loss: float = 0
         entry_time = sig["Datetime"]
         side = sig["Signal"]
 
+        # Skip if entry_time not in data
         if entry_time not in df.index:
             continue
 
@@ -32,48 +32,39 @@ def backtest_orb(data: pd.DataFrame, signals: pd.DataFrame, stop_loss: float = 0
         after_entry = df.loc[entry_time:].copy()
         exit_price = entry_price
         breakeven_triggered = False
-        adjusted_target = None  # New higher take-profit once triggered
 
         # Walk forward candle by candle
         for i in range(len(after_entry)):
             bar_high = float(after_entry["High"].iloc[i])
             bar_low = float(after_entry["Low"].iloc[i])
 
-            # Calculate unrealized gain
+            # Track unrealized profit relative to entry
             move = (bar_high - entry_price) / entry_price if side == 1 else (entry_price - bar_low) / entry_price
 
-            # --- Activate breakeven + raise TP at 80% progress ---
-            if not breakeven_triggered and move >= 0.8 * take_profit:
+            # --- Activate breakeven stop once profit ≥ 60% of take-profit ---
+            if not breakeven_triggered and move >= 0.6 * take_profit:
                 breakeven_triggered = True
-                adjusted_target = 0.20  # new total gain target (+20%)
 
-            # --- Long side logic ---
+            # --- Long position logic ---
             if side == 1:
-                # Breakeven stop logic
+                # If breakeven active and price falls to entry, exit flat
                 if breakeven_triggered and bar_low <= entry_price:
                     exit_price = entry_price
                     break
-                # Adjusted 20% target
-                if adjusted_target is not None and (bar_high - entry_price) / entry_price >= adjusted_target:
-                    exit_price = entry_price * (1 + adjusted_target)
-                    break
-                # Regular take-profit / stop-loss
-                if adjusted_target is None and (bar_high - entry_price) / entry_price >= take_profit:
+                # Regular TP/SL checks
+                if (bar_high - entry_price) / entry_price >= take_profit:
                     exit_price = entry_price * (1 + take_profit)
                     break
                 elif (bar_low - entry_price) / entry_price <= -stop_loss:
                     exit_price = entry_price * (1 - stop_loss)
                     break
 
-            # --- Short side logic ---
+            # --- Short position logic ---
             elif side == -1:
                 if breakeven_triggered and bar_high >= entry_price:
                     exit_price = entry_price
                     break
-                if adjusted_target is not None and (entry_price - bar_low) / entry_price >= adjusted_target:
-                    exit_price = entry_price * (1 - adjusted_target)
-                    break
-                if adjusted_target is None and (entry_price - bar_low) / entry_price >= take_profit:
+                if (entry_price - bar_low) / entry_price >= take_profit:
                     exit_price = entry_price * (1 - take_profit)
                     break
                 elif (entry_price - bar_high) / entry_price <= -stop_loss:
@@ -84,7 +75,7 @@ def backtest_orb(data: pd.DataFrame, signals: pd.DataFrame, stop_loss: float = 0
         ret = (exit_price - entry_price) / entry_price * side
         trades.append(ret)
 
-    # Build results
+    # Build results DataFrame
     results = pd.DataFrame({"Return": trades})
     results["Cumulative"] = (1 + results["Return"]).cumprod()
 
@@ -92,6 +83,6 @@ def backtest_orb(data: pd.DataFrame, signals: pd.DataFrame, stop_loss: float = 0
     sharpe = np.nan
     if results["Return"].std() > 0:
         sharpe = results["Return"].mean() / results["Return"].std() * (252 ** 0.5)
-    mdd = (results["Cumulative"].cummax() - results["Cumulative"]).max()
 
+    mdd = (results["Cumulative"].cummax() - results["Cumulative"]).max()
     return results, sharpe, mdd

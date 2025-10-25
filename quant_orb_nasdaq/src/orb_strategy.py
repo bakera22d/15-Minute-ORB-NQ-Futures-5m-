@@ -1,3 +1,4 @@
+import pandas as pd
 def generate_orb_signals(data, open_time="09:30", close_time="16:00"):
     """Generate 15-minute Opening Range Breakout (ORB) buy/sell signals for each trading day."""
     df = data.copy()

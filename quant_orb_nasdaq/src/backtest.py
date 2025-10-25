@@ -15,7 +15,7 @@ def backtest_orb(data: pd.DataFrame, signals: pd.DataFrame, stop_loss: float = 0
     stop_loss : float
         Fractional stop-loss (e.g., 0.003 = 0.3%).
     take_profit : float
-        Fractional take-profit (e.g., 0.006 = 0.6%).
+        Fractional take-profit (e.g., 0.006 = 0.8%).
     """
     df = data.copy()
     trades = []

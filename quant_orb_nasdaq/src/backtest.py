@@ -1,4 +1,4 @@
-mport pandas as pd
+import pandas as pd
 
 def backtest_orb(data: pd.DataFrame, signals: pd.DataFrame, stop_loss: float = 0.003, take_profit: float = 0.006):
     """

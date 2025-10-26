@@ -6,12 +6,6 @@ def generate_orb_signals(data, open_time="09:30", close_time="16:00"):
 
     df = data.copy()
 
-    # --- Time zone localization to New York (for yfinance UTC data) ---
-    if df.index.tz is None:
-        df.index = df.index.tz_localize("UTC").tz_convert("America/New_York")
-    else:
-        df.index = df.index.tz_convert("America/New_York")
-
     # --- Remove weekends ---
     df = df[df.index.dayofweek < 5]  # 0=Monday, 6=Sunday
 

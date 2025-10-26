@@ -59,4 +59,4 @@ def generate_orb_signals(data, open_time="09:30", close_time="16:00"):
                 "ORB_Low": low
             })
 
-    return pd.DataFrame(signals) into this
+    return pd.DataFrame(signals)

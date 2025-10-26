@@ -2,7 +2,7 @@ import pandas as pd
 
 def generate_orb_signals(data, open_time="09:30", close_time="16:00"):
     """Generate 15-minute Opening Range Breakout (ORB) buy/sell signals for each trading day,
-    with time zone localization and weekend/incomplete-session filtering."""
+    with weekend/incomplete-session filtering and volatility filter to skip low-range days."""
 
     df = data.copy()
 
@@ -27,6 +27,11 @@ def generate_orb_signals(data, open_time="09:30", close_time="16:00"):
 
         high = float(orb_range["High"].max())
         low = float(orb_range["Low"].min())
+
+        # --- Volatility filter: skip if range is too tight (<0.15%) ---
+        range_pct = (high - low) / low
+        if range_pct < 0.0015:  # 0.15% threshold
+            continue  # skip low-volatility open
 
         # Slice after 9:45 to find breakout
         post_orb = day_data.between_time("09:45", close_time)
@@ -56,8 +61,8 @@ def generate_orb_signals(data, open_time="09:30", close_time="16:00"):
                 "Datetime": breakout_idx,
                 "Signal": side,
                 "ORB_High": high,
-                "ORB_Low": low
+                "ORB_Low": low,
+                "Range_Pct": range_pct  # optional for analysis
             })
 
     return pd.DataFrame(signals)
-
